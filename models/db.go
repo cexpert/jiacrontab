@@ -29,6 +29,7 @@ func CreateDB(dialect string, args ...interface{}) error {
 	return fmt.Errorf("unknow database type %s", dialect)
 }
 
+// 创建sqlite3文件，并建立db connect
 func createSqlite3(dialect string, args ...interface{}) error {
 	var err error
 	if args[0] == nil {
@@ -40,7 +41,7 @@ func createSqlite3(dialect string, args ...interface{}) error {
 	if err != nil {
 		return fmt.Errorf("sqlite3:%s", err)
 	}
-
+	// db 数据模块级别的全局变量
 	db, err = gorm.Open(dialect, args...)
 	if err == nil {
 		db.DB().SetMaxOpenConns(1)
@@ -48,6 +49,7 @@ func createSqlite3(dialect string, args ...interface{}) error {
 	return err
 }
 
+// 外部模块调用db，需要通过DB()来获取
 func DB() *D {
 	if db == nil {
 		panic("you must call CreateDb first")

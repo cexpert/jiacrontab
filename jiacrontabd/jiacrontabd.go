@@ -19,24 +19,24 @@ import (
 )
 
 // Jiacrontabd scheduling center
+// 全局只有一个 Jiacrontabd 实例
 type Jiacrontabd struct {
-	crontab *crontab.Crontab
-	// All jobs added
-	jobs            map[uint]*JobEntry
-	tmpJobs         map[string]*JobEntry
-	dep             *dependencies
-	daemon          *Daemon
-	heartbeatPeriod time.Duration
-	mux             sync.RWMutex
-	startTime       time.Time
-	cfg             atomic.Value
-	wg              util.WaitGroupWrapper
+	crontab         *crontab.Crontab      // 存在优先级的定时任务队列，任务切片
+	jobs            map[uint]*JobEntry    // job实例map
+	tmpJobs         map[string]*JobEntry  // 临时job实例map，只执行一次的job
+	dep             *dependencies         // 依赖job实体的channel队列
+	daemon          *Daemon               // 常住任务队列
+	heartbeatPeriod time.Duration         // 心跳间隔，默认5s
+	mux             sync.RWMutex          // 读写锁
+	startTime       time.Time             // jiacrontabd进程运行开始时间，用于计算进程运行时长
+	cfg             atomic.Value          // jiacrontabd对应的配置信息
+	wg              util.WaitGroupWrapper // sync.WaitGroup能够一直等到所有的goroutine执行完成，并且阻塞主线程的执行，直到所有的goroutine执行完成
 }
 
 // New return a Jiacrontabd instance
 func New(opt *Config) *Jiacrontabd {
 	j := &Jiacrontabd{
-		jobs:    make(map[uint]*JobEntry),
+		jobs:    make(map[uint]*JobEntry), //
 		tmpJobs: make(map[string]*JobEntry),
 
 		heartbeatPeriod: 5 * time.Second,
@@ -49,11 +49,15 @@ func New(opt *Config) *Jiacrontabd {
 	return j
 }
 
+// 获取Jiacrontabd实例的cfg，config信息
 func (j *Jiacrontabd) getOpts() *Config {
+	// 类型断言，这里Load()返回的是一个 interface {} 接口
+	// 接口.(类型) 意思是进行类型转换，即将接口转换成某种类型
 	return j.cfg.Load().(*Config)
 }
 
 func (j *Jiacrontabd) swapOpts(opts *Config) {
+	//
 	j.cfg.Store(opts)
 }
 
@@ -70,12 +74,14 @@ func (j *Jiacrontabd) removeTmpJob(job *JobEntry) {
 }
 
 func (j *Jiacrontabd) addJob(job *crontab.Job, updateLastExecTime bool) {
+	// 对Jiacrontabd 写入加锁
 	j.mux.Lock()
-	if v, ok := j.jobs[job.ID]; ok {
+	if v, ok := j.jobs[job.ID]; ok { // 如果job id在队列中，更新job
 		v.job = job
-	} else {
+	} else { // 如果job id不在队列中，新建一个job实体
 		j.jobs[job.ID] = newJobEntry(job, j)
 	}
+	// 释放锁
 	j.mux.Unlock()
 
 	if err := j.crontab.AddJob(job); err != nil {
@@ -320,15 +326,15 @@ func (j *Jiacrontabd) heartBeat() {
 			Status  models.JobStatus
 		}
 		ok             bool
-		nodes          = make(map[uint]models.Node)
+		nodes          = make(map[uint]models.Node) // 初始化 nodes 字典
 		cfg            = j.getOpts()
-		nodeName       = cfg.NodeName
+		nodeName       = cfg.NodeName // 节点主机名
 		node           models.Node
 		superGroupNode models.Node
 	)
 
-	if nodeName == "" {
-		nodeName = util.GetHostname()
+	if nodeName == "" { // 如果没有设置主机名，获取主机名
+		nodeName = util.GetHostname() // 获取主机名
 	}
 
 	models.DB().Model(&models.CrontabJob{}).Select("id,group_id,status,failed,count(1) as total").Group("group_id,status,failed").Scan(&cronJobs)
@@ -402,12 +408,12 @@ func (j *Jiacrontabd) heartBeat() {
 func (j *Jiacrontabd) recovery() {
 	var crontabJobs []models.CrontabJob
 	var daemonJobs []models.DaemonJob
-
+	// db中搜索出job状态为 定时中 和 执行中， 结果存入crontabJobs
 	err := models.DB().Find(&crontabJobs, "status IN (?)", []models.JobStatus{models.StatusJobTiming, models.StatusJobRunning}).Error
 	if err != nil {
 		log.Debug("crontab recovery:", err)
 	}
-
+	//
 	for _, v := range crontabJobs {
 		j.addJob(&crontab.Job{
 			ID:      v.ID,
@@ -436,15 +442,22 @@ func (j *Jiacrontabd) recovery() {
 }
 
 func (j *Jiacrontabd) init() {
-	cfg := j.getOpts()
+	cfg := j.getOpts() // 获取Config实例
+	// 初始化DB，并建立数据库连接
 	if err := models.CreateDB(cfg.DriverName, cfg.DSN); err != nil {
 		panic(err)
 	}
+	// 通过 models.DB() 获取db实例
+	// AutoMigrate ORM 迁移，将定义的结构体迁移至数据库
 	models.DB().AutoMigrate(&models.CrontabJob{}, &models.DaemonJob{})
 	j.startTime = time.Now()
+	// 判断是否需要清理任务日志
 	if cfg.AutoCleanTaskLog {
+		// 开启一个协程查询并删除任务日志
+		// 清楚30天前的日志
 		go finder.SearchAndDeleteFileOnDisk(cfg.LogPath, 24*time.Hour*30, 1<<30)
 	}
+	// 恢复数据库中状态为'定时中'和'执行中'的任务，加入job队列
 	j.recovery()
 }
 
@@ -454,8 +467,11 @@ func (j *Jiacrontabd) rpcCallCtx(ctx context.Context, serviceMethod string, args
 
 // Main main function
 func (j *Jiacrontabd) Main() {
-	j.init()
+	j.init() // Jiacrontabd实例初始化操作
 	j.heartBeat()
 	go j.run()
+	// newCrontabJobSrv	新建CrontabJob实例
+	// newDaemonJobSrv 新建DaemonJob实例
+	// newSrv
 	rpc.ListenAndServe(j.getOpts().ListenAddr, newCrontabJobSrv(j), newDaemonJobSrv(j), newSrv(j))
 }

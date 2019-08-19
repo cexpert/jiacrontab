@@ -7,7 +7,7 @@ import (
 
 // InternalIP return internal ip.
 func InternalIP() string {
-	inters, err := net.Interfaces()
+	inters, err := net.Interfaces() // 获取主机所有的接口
 	if err != nil {
 		return ""
 	}
@@ -19,7 +19,7 @@ func InternalIP() string {
 			}
 			for _, addr := range addrs {
 				if ipnet, ok := addr.(*net.IPNet); ok && !ipnet.IP.IsLoopback() {
-					if ipnet.IP.To4() != nil {
+					if ipnet.IP.To4() != nil { // 获取的IP可以转成IPv4
 						return ipnet.IP.String()
 					}
 				}

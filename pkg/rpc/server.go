@@ -10,12 +10,13 @@ import (
 func listen(addr string, srcvr ...interface{}) error {
 	var err error
 	for _, v := range srcvr {
+		// 在DefaultServer中注册发布接收方的方法。
 		if err = rpc.Register(v); err != nil {
 			return err
 		}
 	}
 
-	l, err := net.Listen("tcp4", addr)
+	l, err := net.Listen("tcp4", addr) // tcp监听
 	if err != nil {
 		return err
 	}
@@ -25,8 +26,7 @@ func listen(addr string, srcvr ...interface{}) error {
 			log.Infof("listen.Close() error(%v)", err)
 		}
 	}()
-
-	rpc.Accept(l)
+	rpc.Accept(l) // 接受Listener上的连接，并为每个传入的连接向DefaultServer提供请求。
 	return nil
 }
 

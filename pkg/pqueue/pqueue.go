@@ -1,5 +1,5 @@
 // Package pqueue jiacrontab中使用的优先队列
-// 参考nsq的实现
+// 参考nsq的实现，最小堆实现的优先级队列，节省内存开销
 // 做了注释和少量调整
 package pqueue
 
@@ -7,6 +7,9 @@ import (
 	"container/heap"
 )
 
+// Item 结构体
+// 优先级队列中每个具体队列项目
+// 其实就是项目中的每个Task
 type Item struct {
 	Value    interface{}
 	Priority int64
@@ -16,7 +19,7 @@ type Item struct {
 // PriorityQueue 最小堆实现的优先队列
 type PriorityQueue []*Item
 
-// New 创建
+// New 创建，新建一个优先级队列
 func New(capacity int) PriorityQueue {
 	return make(PriorityQueue, 0, capacity)
 }

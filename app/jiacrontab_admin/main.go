@@ -18,6 +18,7 @@ import (
 	_ "github.com/jinzhu/gorm/dialects/sqlite"
 )
 
+// parseFlag 解析flag参数，更新config配置项
 func parseFlag(opt *admin.Config) *flag.FlagSet {
 
 	var (
@@ -35,18 +36,18 @@ func parseFlag(opt *admin.Config) *flag.FlagSet {
 	flagSet.StringVar(&cfgPath, "config", "./jiacrontab_admin.ini", "配置文件路径")
 	// jwt options
 	flagSet.Parse(os.Args[1:])
-
+	// 判断是否指定--version，这里使用了类型断言
 	if flagSet.Lookup("version").Value.(flag.Getter).Get().(bool) {
 		fmt.Println(version.String("jiacrontab_admin"))
 		os.Exit(0)
 	}
+	// 判断是否指定--help，这里使用了类型断言
 	if flagSet.Lookup("help").Value.(flag.Getter).Get().(bool) {
 		flagSet.Usage()
 		os.Exit(0)
 	}
 
-	opt.CfgPath = cfgPath
-
+	opt.CfgPath = cfgPath // 替换opt初始化配置
 	opt.Resolve()
 
 	if util.HasFlagName(flagSet, "debug") {

@@ -14,6 +14,7 @@ const (
 	starBit = 1 << 63
 )
 
+// bounds 用户定义数据界限
 type bounds struct {
 	min, max uint
 	names    map[string]uint
@@ -50,6 +51,7 @@ var (
 	}}
 )
 
+// Job 任务
 type Job struct {
 	Second  string
 	Minute  string

@@ -1,3 +1,4 @@
+// Agent主入口文件
 package main
 
 import (
@@ -72,7 +73,7 @@ func main() {
 		"warn":  2,
 		"error": 3,
 	}[cfg.LogLevel])
-	pprof.ListenPprof()
-	jiad := jiacrontabd.New(cfg)
+	pprof.ListenPprof()          // 系统资源使用情况监听，可以通过系统kill命令发送SIGUSR1信号是，记录当前性能指标信息
+	jiad := jiacrontabd.New(cfg) // 新建 jiacrontabd 实例
 	jiad.Main()
 }

@@ -8,7 +8,7 @@ import (
 
 	"github.com/iwannay/log"
 
-	ini "gopkg.in/ini.v1"
+	"gopkg.in/ini.v1"
 )
 
 const (
@@ -32,10 +32,11 @@ type Config struct {
 	DSN                 string `opt:"dsn"`
 }
 
+// Resolve 解析配置文件
 func (c *Config) Resolve() error {
-	c.iniFile = c.loadConfig(c.CfgPath)
+	c.iniFile = c.loadConfig(c.CfgPath) // 加载ini文件
 
-	val := reflect.ValueOf(c).Elem()
+	val := reflect.ValueOf(c).Elem() // 反射中使用 Elem()方法获取指针对应的
 	typ := val.Type()
 
 	for i := 0; i < typ.NumField(); i++ {
@@ -57,7 +58,7 @@ func (c *Config) Resolve() error {
 			if err != nil {
 				log.Errorf("cannot resolve ini field %s err(%v)", opt, err)
 			}
-			val.Field(i).SetBool(v)
+			val.Field(i).SetBool(v) // 根据索引，返回索引对应的结构体字段的信息，通过Set方法修改值。
 		case reflect.String:
 			val.Field(i).SetString(key.String())
 		case reflect.Int, reflect.Int16, reflect.Int32, reflect.Int64, reflect.Int8:
@@ -69,7 +70,7 @@ func (c *Config) Resolve() error {
 		}
 	}
 
-	if c.BoardcastAddr == "" {
+	if c.BoardcastAddr == "" { // 如果配置文件广播地址未设置，设置默认值
 		_, port, _ := net.SplitHostPort(c.ListenAddr)
 		c.BoardcastAddr = util.InternalIP() + ":" + port
 	}
@@ -93,8 +94,9 @@ func NewConfig() *Config {
 	}
 }
 
+// loadConfig 加载config文件
 func (c *Config) loadConfig(path string) *ini.File {
-	if !file.Exist(path) {
+	if !file.Exist(path) { // 如果文件不存在，则创建文件
 		f, err := file.CreateFile(path)
 		if err != nil {
 			panic(err)
@@ -102,7 +104,7 @@ func (c *Config) loadConfig(path string) *ini.File {
 		f.Close()
 	}
 
-	iniFile, err := ini.Load(path)
+	iniFile, err := ini.Load(path) // load ini文件
 	if err != nil {
 		panic(err)
 	}

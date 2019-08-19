@@ -24,29 +24,34 @@ const (
 	exitTimeout     = "Timeout"
 )
 
+// process 任务执行结构体
+// 记录任务执行原数据，对应的上下文句柄
 type process struct {
 	id        uint32
-	deps      []*depEntry
-	ctx       context.Context
-	cancel    context.CancelFunc
-	err       error
-	startTime time.Time
-	endTime   time.Time
-	ready     chan struct{}
-	retryNum  int
-	jobEntry  *JobEntry
+	deps      []*depEntry        // 以来的实体
+	ctx       context.Context    // 上下文
+	cancel    context.CancelFunc //可以手动触发结束上下文，从而结束协程
+	err       error              // 错误
+	startTime time.Time          // 执行开始时间
+	endTime   time.Time          // 执行结束时间
+	ready     chan struct{}      //
+	retryNum  int                // 重试次数
+	jobEntry  *JobEntry          // job对应的实体
 }
 
+// newProcess 新建处理任务
+// 将job实体放到process中
 func newProcess(id uint32, jobEntry *JobEntry) *process {
-	p := &process{
+	p := &process{ // 初始化process结构体
 		id:        id,
 		jobEntry:  jobEntry,
 		startTime: time.Now(),
 		ready:     make(chan struct{}),
 	}
-
+	// 获取一个上下文
 	p.ctx, p.cancel = context.WithCancel(context.Background())
 
+	// 遍历 jobEntry 的依赖
 	for _, v := range p.jobEntry.detail.DependJobs {
 		cmd := v.Command
 		if v.Code != "" {
@@ -69,6 +74,7 @@ func newProcess(id uint32, jobEntry *JobEntry) *process {
 	return p
 }
 
+// waitDepExecDone 等待依赖进程任务执行完成
 func (p *process) waitDepExecDone() bool {
 
 	var err error
@@ -113,11 +119,12 @@ func (p *process) waitDepExecDone() bool {
 	}
 }
 
+// exec 执行
 func (p *process) exec() error {
 	var (
 		ok       bool
 		err      error
-		doneChan = make(chan struct{}, 1)
+		doneChan = make(chan struct{}, 1) // 创建一个长度为1 空类型的异步队列，用于标记任务是否执行完成
 	)
 
 	if ok = p.waitDepExecDone(); !ok {
@@ -127,7 +134,8 @@ func (p *process) exec() error {
 			time.AfterFunc(
 				time.Duration(p.jobEntry.detail.Timeout)*time.Second, func() {
 					select {
-					case <-doneChan:
+					case <-doneChan: // doneChan 如果为空，则阻塞协程
+						// doneChan可以读出成功，关闭doneChan通道
 						close(doneChan)
 					default:
 						log.Debug("timeout callback:", "jobID:", p.jobEntry.detail.ID)
@@ -136,11 +144,13 @@ func (p *process) exec() error {
 				})
 		}
 
+		// p.jobEntry.detail对应数据库的job记录，用户表单录入
 		arg := p.jobEntry.detail.Command
 		if p.jobEntry.detail.Code != "" {
 			arg = append(arg, p.jobEntry.detail.Code)
 		}
 
+		// process在运行时，会实例化 cmdUnit, cmdUnit是任务执行的最底层结构体
 		myCmdUnit := cmdUint{
 			args:             [][]string{arg},
 			ctx:              p.ctx,
@@ -154,7 +164,7 @@ func (p *process) exec() error {
 			jd:               p.jobEntry.jd,
 		}
 
-		if p.jobEntry.once {
+		if p.jobEntry.once { // 如果只是一次性任务，设置cmd任务的exportLog 为 true
 			myCmdUnit.exportLog = true
 		}
 		p.err = myCmdUnit.launch()
@@ -173,21 +183,22 @@ func (p *process) exec() error {
 	return p.err
 }
 
+// JobEntry job实体
 type JobEntry struct {
-	job         *crontab.Job
-	detail      models.CrontabJob
-	processNum  int32
-	processes   map[uint32]*process
-	pc          int32
-	wg          util.WaitGroupWrapper
-	logContent  []byte
-	jd          *Jiacrontabd
-	IDChan      chan uint32
-	IDGenerator uint32
-	mux         sync.RWMutex
-	once        bool  // 只执行一次
-	stop        int32 // job stop status
-	uniqueID    string
+	job         *crontab.Job          // job实例
+	detail      models.CrontabJob     // job信息信息，对应数据库信息
+	processNum  int32                 // 进程号
+	processes   map[uint32]*process   //
+	pc          int32                 //
+	wg          util.WaitGroupWrapper //
+	logContent  []byte                //
+	jd          *Jiacrontabd          //
+	IDChan      chan uint32           //
+	IDGenerator uint32                //
+	mux         sync.RWMutex          //
+	once        bool                  // 只执行一次
+	stop        int32                 // job stop status
+	uniqueID    string                // job的唯一标志
 }
 
 func newJobEntry(job *crontab.Job, jd *Jiacrontabd) *JobEntry {

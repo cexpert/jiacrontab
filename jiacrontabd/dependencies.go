@@ -9,25 +9,26 @@ import (
 	"github.com/iwannay/log"
 )
 
+// depEntry 依赖实例
 type depEntry struct {
-	jobID       uint   // 定时任务id
-	jobUniqueID string // job的唯一标志
-	processID   int    // 当前依赖的父级任务（可能存在多个并发的task)
-	id          string // depID uuid
-	once        bool
-	workDir     string
-	user        string
-	env         []string
-	from        string
-	commands    []string
-	dest        string
-	done        bool
-	timeout     int64
-	err         error
-	ctx         context.Context
-	name        string
-	logPath     string
-	logContent  []byte
+	jobID       uint            // 定时任务id
+	jobUniqueID string          // job的唯一标志
+	processID   int             // 当前依赖的父级任务（可能存在多个并发的task)
+	id          string          // depID uuid
+	once        bool            // 是否只执行一次
+	workDir     string          // 工作目录
+	user        string          // 用户
+	env         []string        // 环境
+	from        string          //
+	commands    []string        // 命令
+	dest        string          //
+	done        bool            //
+	timeout     int64           // 超时时间
+	err         error           //
+	ctx         context.Context // 上下文
+	name        string          //
+	logPath     string          //
+	logContent  []byte          //
 }
 
 func newDependencies(jd *Jiacrontabd) *dependencies {
@@ -39,12 +40,13 @@ func newDependencies(jd *Jiacrontabd) *dependencies {
 
 type dependencies struct {
 	jd  *Jiacrontabd
-	dep chan *depEntry
+	dep chan *depEntry // depEntry的channel，单队列
 }
 
+// add 向 dependencies 队列实例中插入depEntry
 func (d *dependencies) add(t *depEntry) {
 	select {
-	case d.dep <- t:
+	case d.dep <- t: // 如果 d.dep 为空，可以传入成功，否则丢弃
 	default:
 		log.Warnf("discard %v", t)
 	}

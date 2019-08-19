@@ -183,20 +183,28 @@ func (fd *Finder) GetErrors() []error {
 }
 
 func SearchAndDeleteFileOnDisk(dir string, d time.Duration, size int64) {
-	t := time.NewTicker(1 * time.Minute)
+	/**
+	 *time.NewTicker 和 time.NewTimer
+	 *ticker只要定义完成，从此刻开始计时，不需要任何其他的操作，每隔固定时间都会触发。
+	 *timer定时器，是到固定时间后会执行一次
+	 *如果timer定时器要每隔间隔的时间执行，实现ticker的效果，使用 func (t *Timer) Reset(d Duration) bool
+	 */
+	t := time.NewTicker(1 * time.Minute) // 一分钟计时器
 	for {
 		select {
-		case <-t.C:
+		case <-t.C: // 每一分钟执行一次，清除超过30天的日志
+			// walk 日志目录，通过指定的函数句柄进行过期日志清理
 			filepath.Walk(dir, func(fpath string, info os.FileInfo, err error) error {
 				if info == nil {
 					return errors.New(fpath + "not exists")
 				}
-				if !info.IsDir() {
+				if !info.IsDir() { // 非目录
+					// 修改时间超过30天，进行文件删除
 					if time.Now().Sub(info.ModTime()) > d {
 						os.Remove(fpath)
 						return nil
 					}
-
+					// 文件大小大于 size, 进行文件删除
 					if info.Size() > size && size != 0 {
 						os.Remove(fpath)
 						return nil

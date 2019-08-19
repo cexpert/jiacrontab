@@ -18,25 +18,31 @@ import (
 	"github.com/iwannay/log"
 )
 
+// Srv 在rpc中进行服务注册
+// 主要用户获取jiacrontabd的性能参数
 type Srv struct {
 	jd *Jiacrontabd
 }
 
+// newSrv 新建Srv
 func newSrv(jd *Jiacrontabd) *Srv {
 	return &Srv{
 		jd: jd,
 	}
 }
 
+// Ping 用户检测Jiacrontabd 服务的存活性
 func (s *Srv) Ping(args proto.EmptyArgs, reply *proto.EmptyReply) error {
 	return nil
 }
 
+// SystemInfo 用户获取系统信息
 func (s *Srv) SystemInfo(args proto.EmptyArgs, reply *map[string]interface{}) error {
 	*reply = util.SystemInfo(s.jd.startTime)
 	return nil
 }
 
+// CrontabJob 在rpc中进行服务注册
 type CrontabJob struct {
 	jd *Jiacrontabd
 }
@@ -318,6 +324,7 @@ func (j *CrontabJob) Ping(args *proto.EmptyArgs, reply *proto.EmptyReply) error 
 	return nil
 }
 
+// DaemonJob 在rpc中进行服务注册
 type DaemonJob struct {
 	jd *Jiacrontabd
 }

@@ -26,6 +26,7 @@ const (
 	StatusJobStop JobStatus = 4
 )
 
+// CrontabJob结构体，CrontabJob数据表
 type CrontabJob struct {
 	gorm.Model
 	Name             string      `json:"name" gorm:"index;not null"`

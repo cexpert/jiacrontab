@@ -11,16 +11,18 @@ import (
 // Task 任务
 type Task = pqueue.Item
 
+// Crontab 一个存在优先级的定时任务队列
 type Crontab struct {
-	pq    pqueue.PriorityQueue
-	mux   sync.RWMutex
-	ready chan *Task
+	pq    pqueue.PriorityQueue // 优先队列，是一个任务Task切片
+	mux   sync.RWMutex         // 读写锁
+	ready chan *Task           // Task对应的channel
 }
 
+// New 新建Crontab
 func New() *Crontab {
 	return &Crontab{
-		pq:    pqueue.New(10000),
-		ready: make(chan *Task, 10000),
+		pq:    pqueue.New(10000),       // 初始化一个1W容量的优先级队列切片
+		ready: make(chan *Task, 10000), // 初始化一个1W容量的任务channel
 	}
 }
 

@@ -23,27 +23,30 @@ type ApiNotifyArgs struct {
 }
 
 type daemonJob struct {
-	job        *models.DaemonJob
-	daemon     *Daemon
-	ctx        context.Context
-	cancel     context.CancelFunc
-	processNum int
+	job        *models.DaemonJob  // 守护进程任务，数据库模型
+	daemon     *Daemon            // 守护进程
+	ctx        context.Context    // 上下文
+	cancel     context.CancelFunc // 长下文取消句柄
+	processNum int                //
 }
 
+// do 运行常驻进程
 func (d *daemonJob) do(ctx context.Context) {
 
-	d.processNum = 1
-	t := time.NewTicker(1 * time.Second)
+	d.processNum = 1                     // 任务号
+	t := time.NewTicker(1 * time.Second) // 定时器
 	defer t.Stop()
-	d.daemon.wait.Add(1)
-	cfg := d.daemon.jd.getOpts()
-	retryNum := d.job.RetryNum
 
-	defer func() {
+	d.daemon.wait.Add(1)         // 同步组加1
+	cfg := d.daemon.jd.getOpts() // 获取jiacrontab实例的配置
+	retryNum := d.job.RetryNum   // 任务重试次数
+
+	defer func() { // recover 执行的错误
 		if err := recover(); err != nil {
 			log.Errorf("%s exec panic %s \n", d.job.Name, err)
 		}
 		d.processNum = 0
+		// 更新job的执行状态为失败，并更新错误信息
 		if err := models.DB().Model(d.job).Update("status", models.StatusJobStop).Error; err != nil {
 			log.Error(err)
 		}
@@ -51,7 +54,7 @@ func (d *daemonJob) do(ctx context.Context) {
 		d.daemon.wait.Done()
 
 	}()
-
+	// 更新job对应的基础信息到DB
 	if err := models.DB().Model(d.job).Updates(map[string]interface{}{
 		"start_at": time.Now(),
 		"status":   models.StatusJobRunning}).Error; err != nil {
@@ -64,18 +67,21 @@ func (d *daemonJob) do(ctx context.Context) {
 			stop bool
 			err  error
 		)
-		arg := d.job.Command
+		arg := d.job.Command // 获取job对应的命令
 		if d.job.Code != "" {
+			// 如果用户录入了代码，将代码追加到arg
 			arg = append(arg, d.job.Code)
 		}
+		// 初始化cmdUint实例，这里是具体的cmd执行单元，从这里开始真正的执行任务
 		myCmdUint := cmdUint{
-			ctx:     ctx,
-			args:    [][]string{arg},
-			env:     d.job.WorkEnv,
-			dir:     d.job.WorkDir,
-			user:    d.job.WorkUser,
-			label:   d.job.Name,
-			jd:      d.daemon.jd,
+			ctx:   ctx,
+			args:  [][]string{arg}, // 这里的二维数组，只把arg赋值给[0][0]，数据放在了第二维的数组里
+			env:   d.job.WorkEnv,
+			dir:   d.job.WorkDir,
+			user:  d.job.WorkUser,
+			label: d.job.Name,
+			jd:    d.daemon.jd,
+			// 指定日志文件，通过job的信息生成路径信息
 			logPath: filepath.Join(cfg.LogPath, "daemon_job", time.Now().Format("2006/01/02"), fmt.Sprintf("%d.log", d.job.ID)),
 		}
 
@@ -155,18 +161,20 @@ func (d *daemonJob) handleNotify(err error) {
 	}
 }
 
+// Daemon 守护进程结构体
 type Daemon struct {
-	taskChannel chan *daemonJob
-	taskMap     map[uint]*daemonJob
-	jd          *Jiacrontabd
-	lock        sync.Mutex
-	wait        sync.WaitGroup
+	taskChannel chan *daemonJob     // 常住任务chan队列
+	taskMap     map[uint]*daemonJob // 常住任务job map
+	jd          *Jiacrontabd        //
+	lock        sync.Mutex          // 锁
+	wait        sync.WaitGroup      // 同步组
 }
 
+// newDaemon 新建Daemon
 func newDaemon(taskChannelLength int, jd *Jiacrontabd) *Daemon {
 	return &Daemon{
-		taskMap:     make(map[uint]*daemonJob),
-		taskChannel: make(chan *daemonJob, taskChannelLength),
+		taskMap:     make(map[uint]*daemonJob),                // 初始化常住任务job map
+		taskChannel: make(chan *daemonJob, taskChannelLength), // 初始化常住任务chan队列，指定channel长度
 		jd:          jd,
 	}
 }

@@ -31,14 +31,16 @@ func CurrentTime(t int64) string {
 	return time.Unix(t, 0).Format("2006-01-02 15:04:05")
 }
 
+// SystemInfo
 func SystemInfo(startTime time.Time) map[string]interface{} {
 	var afterLastGC string
-	goNum := runtime.NumGoroutine()
-	cpuNum := runtime.NumCPU()
-	mstat := &runtime.MemStats{}
-	runtime.ReadMemStats(mstat)
+	goNum := runtime.NumGoroutine() // 获取协程数量
+	cpuNum := runtime.NumCPU()      // 获取cpu数量
+	mstat := &runtime.MemStats{}    // 实例化内存状态实例
+	runtime.ReadMemStats(mstat)     // 获取内存状态
 	costTime := int(time.Since(startTime).Seconds())
 
+	// 获取距离上次GC时间
 	if mstat.LastGC != 0 {
 		afterLastGC = fmt.Sprintf("%.1fs", float64(time.Now().UnixNano()-int64(mstat.LastGC))/1000/1000/1000)
 	} else {
@@ -72,14 +74,15 @@ func SystemInfo(startTime time.Time) map[string]interface{} {
 }
 
 func TryOpen(path string, flag int) (*os.File, error) {
-	fabs, err := filepath.Abs(path)
+	fabs, err := filepath.Abs(path) // 获取文件绝对路径
 	if err != nil {
 		log.Errorf("TryOpen:", err)
 		return nil, err
 	}
 
-	f, err := os.OpenFile(fabs, flag, 0644)
+	f, err := os.OpenFile(fabs, flag, 0644) // 打开文件
 	if os.IsNotExist(err) {
+		// 报文件不存在，进行日志目录递归创建，在打开文件
 		err = os.MkdirAll(filepath.Dir(fabs), 0755)
 		if err != nil {
 			return nil, err
@@ -149,6 +152,7 @@ func UUID() string {
 	return uu.String()
 }
 
+// GetHostname 获取主机名
 func GetHostname() string {
 	hostname, err := os.Hostname()
 	if err != nil {
