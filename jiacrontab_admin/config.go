@@ -9,7 +9,7 @@ import (
 
 	"github.com/iwannay/log"
 
-	ini "gopkg.in/ini.v1"
+	"gopkg.in/ini.v1"
 )
 
 const (
@@ -116,6 +116,7 @@ func (c *Config) Resolve() {
 	}
 }
 
+// NewConfig Config的构造函数，初始化实例
 func NewConfig() *Config {
 	return &Config{
 		App: &AppOpt{

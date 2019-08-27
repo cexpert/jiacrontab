@@ -14,6 +14,7 @@ import (
 	"github.com/iwannay/log"
 )
 
+// MasterRpcServer
 type Srv struct {
 	adm *Admin
 }

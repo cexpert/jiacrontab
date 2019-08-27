@@ -64,8 +64,8 @@ func parseFlag(opt *admin.Config) *flag.FlagSet {
 }
 
 func main() {
-	cfg := admin.NewConfig()
-	parseFlag(cfg)
+	cfg := admin.NewConfig() // 初始化Config实例，返回的是*Config
+	parseFlag(cfg)           // 解析Flag参数，并初将flag配置到Config实例
 	log.SetLevel(map[string]int{
 		"debug": 0,
 		"info":  1,
@@ -73,6 +73,6 @@ func main() {
 		"error": 3,
 	}[cfg.App.LogLevel])
 	pprof.ListenPprof()
-	admin := admin.New(cfg)
-	admin.Main()
+	adm := admin.New(cfg) // 实例化admin
+	adm.Main()
 }

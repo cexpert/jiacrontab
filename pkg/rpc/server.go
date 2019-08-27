@@ -7,6 +7,7 @@ import (
 )
 
 // listen Start rpc server
+// srcvr 是一个空接口的切片
 func listen(addr string, srcvr ...interface{}) error {
 	var err error
 	for _, v := range srcvr {
@@ -31,8 +32,10 @@ func listen(addr string, srcvr ...interface{}) error {
 }
 
 // ListenAndServe  run rpc server
+// srcvr 是一个空接口的切片
 func ListenAndServe(addr string, srcvr ...interface{}) {
 	log.Info("rpc server listen:", addr)
+	// srcvr... 展开srcvr切片
 	err := listen(addr, srcvr...)
 	if err != nil {
 		panic(err)

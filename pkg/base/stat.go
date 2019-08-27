@@ -1,3 +1,4 @@
+// 应用内Web服务指标统计
 package base
 
 import (
@@ -79,8 +80,8 @@ func (s *stat) QueryIntervalErrorData(key string) uint64 {
 
 func (s *stat) AddRequestCount(page string, code int, num uint64) uint64 {
 
-	if !strings.HasPrefix(page, "/debug") {
-		atomic.AddUint64(&s.TotalRequestCount, num)
+	if !strings.HasPrefix(page, "/debug") { // 不是debugURL开头，不统计debug url
+		atomic.AddUint64(&s.TotalRequestCount, num) // 请求数+1
 		s.addRequestData(page, code, num)
 		s.addHTTPCodeData(page, code, num)
 	}
@@ -88,16 +89,19 @@ func (s *stat) AddRequestCount(page string, code int, num uint64) uint64 {
 	return atomic.LoadUint64(&s.TotalRequestCount)
 }
 
+// AddConcurrentCount 统计当前并发量
 func (s *stat) AddConcurrentCount() {
 	atomic.AddInt64(&s.TotalConcurrentCount, 1)
 }
 
+// AddErrorCount 统计Error数量
 func (s *stat) AddErrorCount(page string, err error, num uint64) uint64 {
 	atomic.AddUint64(&s.TotalErrorCount, num)
 	s.addErrorData(page, err, num)
 	return atomic.LoadUint64(&s.TotalErrorCount)
 }
 
+// addRequestData
 func (s *stat) addRequestData(page string, code int, num uint64) {
 	info := s.infoPool.requestInfo.Get().(*RequestInfo)
 	info.URL = page

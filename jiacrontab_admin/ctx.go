@@ -12,16 +12,18 @@ import (
 
 	"github.com/iwannay/log"
 
-	jwt "github.com/dgrijalva/jwt-go"
+	"github.com/dgrijalva/jwt-go"
 	"github.com/kataras/iris"
 )
 
+// myctx 类，主要是扩展原生ctx类
 type myctx struct {
-	iris.Context
-	adm    *Admin
-	claims CustomerClaims
+	iris.Context          //
+	adm    *Admin         //
+	claims CustomerClaims // 客户要求
 }
 
+// wrapCtx 包装iris.Context，将adm加入ctx结构体
 func wrapCtx(ctx iris.Context, adm *Admin) *myctx {
 	key := "__ctx__"
 	if v := ctx.Values().Get(key); v != nil {

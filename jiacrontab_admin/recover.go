@@ -20,10 +20,11 @@ func getRequestLogs(ctx context.Context) string {
 	return fmt.Sprintf("%v %s %s %s", status, path, method, ip)
 }
 
+// newRecover 主要用于做http请求统计
 func newRecover(adm *Admin) context.Handler {
-	return func(c context.Context) {
-		ctx := wrapCtx(c, adm)
-		base.Stat.AddConcurrentCount()
+	return func(c context.Context) { // 返回的是自定义的一个iris中间件句柄
+		ctx := wrapCtx(c, adm) // 包装自定义的ctx
+		base.Stat.AddConcurrentCount() // 一个新的上下文，并发数加1
 		defer func() {
 			if err := recover(); err != nil {
 
@@ -56,6 +57,7 @@ func newRecover(adm *Admin) context.Handler {
 				ctx.StopExecution()
 			}
 		}()
+		// 统计url，获取上下文的url绝对路径、请求响应码
 		base.Stat.AddRequestCount(ctx.RequestPath(true), ctx.GetStatusCode(), 1)
 		c.Next()
 	}
